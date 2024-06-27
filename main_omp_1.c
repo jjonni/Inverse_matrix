@@ -16,7 +16,7 @@ double** inverse_matrix(double **m, int size);
 
 int main() {
 	omp_set_dynamic(0);
-	omp_set_num_threads(10);
+	omp_set_num_threads(5);
 	const unsigned long long cpu_HZ = 2400000000ULL;
 	unsigned long long start, end;
 	int time_repeat = 1;
@@ -26,6 +26,16 @@ int main() {
 	double **matrix = (double**)calloc(m_size, sizeof(*matrix)), **inverse_m;
 	for (int i = 0; i < m_size; ++i) matrix[i] = (double*)calloc(m_size, sizeof(*matrix[i]));
 
+	/*
+	int num = 1;
+	for (int i = 0; i < m_size; ++i) {
+		for (int j = 0; j < m_size; ++j) {
+			matrix[i][j] = num;
+			++num;
+		}
+	} matrix[2][2] = 8; */
+
+	
 	double num = -100;
 	for (int i = 0; i < m_size; ++i) {
 		for (int j = 0; j < m_size; ++j) {
@@ -35,6 +45,7 @@ int main() {
 			else num += 17;
 		}
 	} matrix[3][2]=0; matrix[4][0]=0;
+	
 
 	//printf("Matrix:\n\n");
 	//printM(matrix, m_size);
@@ -110,34 +121,28 @@ double** minor_matrix(double **m, int size, int row, int col) {
 	}
 
 
-	double **new_m = (double**)calloc(size - 1, sizeof(*new_m));
+	double **new_m = (double**)malloc((size - 1) * sizeof(*new_m));
+	if (new_m == NULL) {
+		fprintf(stderr, "Allocation failed\n");
+		exit(-1);
+	}
 	for (int i = 0; i < size - 1; ++i) {
-		new_m[i] = (double*)calloc(size - 1, sizeof(*new_m[i]));
+		new_m[i] = (double*)malloc((size - 1) * sizeof(*new_m[i]));
 		if (new_m[i] == NULL) {
 			fprintf(stderr, "Allocation failed\n");
 			exit(-1);
 		}
 	}
 
-	int offsetrow = 0, offsetcol = 0;
+	#pragma omp parallel for shared(new_m, m, size, row, col)
+	for (int i = 0; i < size - 1; ++i) {
 
-	int i;
-	#pragma omp parallel for collapse(2) shared(offsetrow, offsetcol)
-	for (i = 0; i < size; ++i) {
-		if (i == row) {
-			offsetrow = 1;
-			continue;
-		}
+		int local_offsetrow = 0;
+		if(i >= row) local_offsetrow = 1;
 
-		offsetcol = 0;
-
-		for (int j = 0; j < size; ++j) {
-			if (j == col) {
-				offsetcol = 1;
-				continue;
-			}
-
-			new_m[i - offsetrow][j - offsetcol] = m[i][j];
+		for (int j = 0, local_offsetcol = 0; j < size - 1; ++j) {
+			if (j >= col) local_offsetcol = 1;
+			new_m[i][j] = m[i + local_offsetrow][j + local_offsetcol];
 		}
 	}
 	//printM(new_m, size_m); printf("\n");
