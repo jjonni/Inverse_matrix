@@ -127,7 +127,7 @@ double** minor_matrix(double **m, int size, int row, int col) {
 			new_m[i][j] = m[i + local_offsetrow][j + local_offsetcol];
 		}
 	}
-	//printM(new_m, size_m); printf("\n");
+
 	return new_m;
 }
 
@@ -156,7 +156,6 @@ double detM(double **m, int size) {
 
 	for (int i = 0; i < size; ++i) {
 		det += sign*m[0][i] * minor(m, size, 0, i);
-		//printf("det = %f\n", det);
 		sign = - sign;
 	}
 
@@ -189,7 +188,6 @@ double** attach_matrix(double **m, int size) {
 			attach_m[i][j] = sign*minor(m, size, i, j);
 		}
 	}
-	//printM(attach_m, size); printf("\n");
 
 	return attach_m;
 }
@@ -201,7 +199,6 @@ double** inverse_matrix(double **m, int size) {
 		return NULL;
 	} else {
 		double **inverse_m = attach_matrix(m, size), **transpose_m;
-		//printM(inverse_m, size); printf("\n");
 
 		for (int i = 0; i < size; ++i) {
 			for (int j = 0; j < size; ++j) {
