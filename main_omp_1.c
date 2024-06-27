@@ -57,7 +57,7 @@ int main() {
 		inverse_m = inverse_matrix(matrix, m_size);
 		end = rdtsc();
 		time[i] = (double)(end - start)/cpu_HZ;
-		printf("time = %f\n", time[i]);
+		//printf("time = %f\n", time[i]);
 	}
 
 
@@ -104,6 +104,7 @@ void printM(double **m, int size) {
 }
 
 void clearM(double **m, int size) {
+	#pragma omp parallel for
 	for (int i = 0; i < size; ++i) {
 		free(m[i]);
 	}
@@ -136,7 +137,6 @@ double** minor_matrix(double **m, int size, int row, int col) {
 
 	#pragma omp parallel for shared(new_m, m, size, row, col)
 	for (int i = 0; i < size - 1; ++i) {
-
 		int local_offsetrow = 0;
 		if(i >= row) local_offsetrow = 1;
 
@@ -170,9 +170,10 @@ double detM(double **m, int size) {
 	}
 
 	double det = 0;
-	int sign = 1;
 
+	#pragma omp parallel for reduction(+:det)
 	for (int i = 0; i < size; ++i) {
+		int sign = (i % 2 == 0) ? 1 : -1;
 		det += sign*m[0][i] * minor(m, size, 0, i);
 		//printf("det = %f\n", det);
 		sign = - sign;
@@ -185,7 +186,10 @@ double** transpose_matrix(double **m, int size) {
 	double **transposed_m = (double**)calloc(size, sizeof(*transposed_m));
 	for (int i = 0; i < size; ++i) transposed_m[i] = (double*)calloc(size, sizeof(transposed_m[i]));
 
-	//#pragma omp parallel for
+	// Использование shared(transposed_m, m) необязательно,
+	// так как указанные масивы по умолчанию
+	// являются разделяемым в параллельных блоках
+	#pragma omp parallel for shared(transposed_m, m)
 	for (int i = 0; i < size; ++i) {
 		for (int j = 0; j < size; ++j) {
 			transposed_m[j][i] = m[i][j];
@@ -195,16 +199,15 @@ double** transpose_matrix(double **m, int size) {
 }
 
 double** attach_matrix(double **m, int size) {
-	int sign = 1;
 	double **attach_m = (double**)calloc(size, sizeof(*attach_m));
 	for (int i = 0; i < size; ++i)
 		attach_m[i] = (double*)calloc(size, sizeof(attach_m[i]));
 
-	//#pragma parallel for
+	#pragma omp parallel for
 	for (int i = 0; i < size; ++i) {
+		int sign = 1;
 		for (int j = 0; j < size; ++j) {
-			if ((i+j) % 2 == 0) sign = 1;
-			else sign = -1;
+			sign = (i + j) % 2 ? -1 : 1;
 
 			attach_m[i][j] = sign*minor(m, size, i, j);
 		}
@@ -223,11 +226,9 @@ double** inverse_matrix(double **m, int size) {
 		double **inverse_m = attach_matrix(m, size), **transpose_m;
 		//printM(inverse_m, size); printf("\n");
 
-		//#pragma omp parallel for collapse(2) shared(inverse_m)
+		#pragma omp parallel for shared(inverse_m, determinant)
 		for (int i = 0; i < size; ++i) {
 			for (int j = 0; j < size; ++j) {
-				//printf("Thread %d is processing element inverse_m[%d][%d]\n",
-				//		omp_get_thread_num(), i, j);
 				inverse_m[i][j] /= determinant;
 			}
 		}
