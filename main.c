@@ -12,10 +12,12 @@ double** transpose_matrix(double **m, int size);
 double** attach_matrix(double **m, int size);
 double** inverse_matrix(double **m, int size);
 
+
 int main() {
 	const unsigned long long cpu_HZ = 2400000000ULL;
 	unsigned long long start, end;
-	double time[10];
+	int time_repeat = 1;
+    double time[time_repeat];
 	int m_size = 11;
 
 	double **matrix = (double**)calloc(m_size, sizeof(*matrix)), **inverse_m;
@@ -35,7 +37,7 @@ int main() {
 	//printM(matrix, m_size);
 	//printf("\n\n");
 
-	for (int i = 0; i < 10; ++i) {
+	for (int i = 0; i < time_repeat; ++i) {
 		start = rdtsc();
 		// Рассматриваемая операция
 		inverse_m = inverse_matrix(matrix, m_size);
@@ -50,16 +52,16 @@ int main() {
 	clearM(matrix, m_size);
 	clearM(inverse_m, m_size);
 
-    	printf("time = %f sec\n", average(time, 10));
+    printf("time = %f sec\n", average(time, time_repeat));
 
 	return 0;
 }
 
 unsigned long long rdtsc() {
 	unsigned int lo, hi;
-    	asm volatile ( "rdtsc\n" : "=a" (lo), "=d" (hi) );
+    asm volatile ( "rdtsc\n" : "=a" (lo), "=d" (hi) );
 
-    	return ((unsigned long long)hi << 32) | lo;
+    return ((unsigned long long)hi << 32) | lo;
 }
 
 double average(double *arr, const int size) {
@@ -104,24 +106,28 @@ double** minor_matrix(double **m, int size, int row, int col) {
 	}
 
 
-	double **new_m = (double**)calloc(size - 1, sizeof(*new_m));
-	for (int i = 0; i < size - 1; ++i) new_m[i] = (double*)calloc(size - 1, sizeof(*new_m[i]));
-
-	int offsetrow = 0, offsetcol = 0;
-	for (int i = 0; i < size; ++i) {
-		offsetcol = 0;
-		for (int j = 0; j < size; ++j) {
-			if (i == row) {
-				offsetrow = 1;
-				break;
-			}
-			if (j == col) offsetcol = 1;
-			else {
-				new_m[i - offsetrow][j - offsetcol] = m[i][j];
-			}
-		}
+	double **new_m = (double**)malloc((size - 1) * sizeof(*new_m));
+	if (new_m == NULL) {
+		fprintf(stderr, "Allocation failed\n");
+		exit(-1);
 	}
 
+	for (int i = 0; i < size - 1; ++i) {
+		new_m[i] = (double*)malloc((size - 1) * sizeof(*new_m[i]));
+		if (new_m[i] == NULL) {
+			fprintf(stderr, "Allocation failed\n");
+			exit(-1);
+		}
+
+		int local_offsetrow = 0;
+		if(i >= row) local_offsetrow = 1;
+
+		for (int j = 0, local_offsetcol = 0; j < size - 1; ++j) {
+			if (j >= col) local_offsetcol = 1;
+			new_m[i][j] = m[i + local_offsetrow][j + local_offsetcol];
+		}
+	}
+	//printM(new_m, size_m); printf("\n");
 	return new_m;
 }
 
@@ -150,6 +156,7 @@ double detM(double **m, int size) {
 
 	for (int i = 0; i < size; ++i) {
 		det += sign*m[0][i] * minor(m, size, 0, i);
+		//printf("det = %f\n", det);
 		sign = - sign;
 	}
 
@@ -159,6 +166,7 @@ double detM(double **m, int size) {
 double** transpose_matrix(double **m, int size) {
 	double **transposed_m = (double**)calloc(size, sizeof(*transposed_m));
 	for (int i = 0; i < size; ++i) transposed_m[i] = (double*)calloc(size, sizeof(transposed_m[i]));
+
 	for (int i = 0; i < size; ++i) {
 		for (int j = 0; j < size; ++j) {
 			transposed_m[j][i] = m[i][j];
@@ -181,6 +189,7 @@ double** attach_matrix(double **m, int size) {
 			attach_m[i][j] = sign*minor(m, size, i, j);
 		}
 	}
+	//printM(attach_m, size); printf("\n");
 
 	return attach_m;
 }
@@ -189,9 +198,11 @@ double** inverse_matrix(double **m, int size) {
 	double determinant = detM(m, size);
 	if (determinant == 0) {
 		fprintf(stderr, "Inverse matrix does not exist: detM = 0.\n");
+		return NULL;
 	} else {
 		double **inverse_m = attach_matrix(m, size), **transpose_m;
-		
+		//printM(inverse_m, size); printf("\n");
+
 		for (int i = 0; i < size; ++i) {
 			for (int j = 0; j < size; ++j) {
 				inverse_m[i][j] /= determinant;
