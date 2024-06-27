@@ -15,7 +15,7 @@ double** inverse_matrix(double **m, int size);
 int main() {
 	const unsigned long long cpu_HZ = 2400000000ULL;
 	unsigned long long start, end;
-    double time[10];
+	double time[10];
 	int m_size = 11;
 
 	double **matrix = (double**)calloc(m_size, sizeof(*matrix)), **inverse_m;
@@ -50,16 +50,16 @@ int main() {
 	clearM(matrix, m_size);
 	clearM(inverse_m, m_size);
 
-    printf("time = %f sec\n", average(time, 10));
+    	printf("time = %f sec\n", average(time, 10));
 
 	return 0;
 }
 
 unsigned long long rdtsc() {
 	unsigned int lo, hi;
-    asm volatile ( "rdtsc\n" : "=a" (lo), "=d" (hi) );
+    	asm volatile ( "rdtsc\n" : "=a" (lo), "=d" (hi) );
 
-    return ((unsigned long long)hi << 32) | lo;
+    	return ((unsigned long long)hi << 32) | lo;
 }
 
 double average(double *arr, const int size) {
