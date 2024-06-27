@@ -121,7 +121,7 @@ double** minor_matrix(double **m, int size, int row, int col) {
 			}
 		}
 	}
-	//printM(new_m, size_m); printf("\n");
+
 	return new_m;
 }
 
@@ -150,7 +150,6 @@ double detM(double **m, int size) {
 
 	for (int i = 0; i < size; ++i) {
 		det += sign*m[0][i] * minor(m, size, 0, i);
-		//printf("det = %f\n", det);
 		sign = - sign;
 	}
 
@@ -182,7 +181,6 @@ double** attach_matrix(double **m, int size) {
 			attach_m[i][j] = sign*minor(m, size, i, j);
 		}
 	}
-	//printM(attach_m, size); printf("\n");
 
 	return attach_m;
 }
@@ -193,7 +191,7 @@ double** inverse_matrix(double **m, int size) {
 		fprintf(stderr, "Inverse matrix does not exist: detM = 0.\n");
 	} else {
 		double **inverse_m = attach_matrix(m, size), **transpose_m;
-		//printM(inverse_m, size); printf("\n");
+		
 		for (int i = 0; i < size; ++i) {
 			for (int j = 0; j < size; ++j) {
 				inverse_m[i][j] /= determinant;
